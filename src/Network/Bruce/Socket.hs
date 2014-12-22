@@ -73,7 +73,7 @@ defaultBufferSize :: Int
 defaultBufferSize = 212992
 
 -- | @datagramSocket p n@ creates a new @Bruce@ UNIX domain datagram 'Socket'
--- with a send and receive buffer of size @n@ which thus also determiens the
+-- with a send and receive buffer of size @n@ which thus also determines the
 -- maximum size of datagrams that can be sent or received through the socket.
 datagramSocket :: FilePath -> Int -> IO Socket
 datagramSocket fp buf = do
