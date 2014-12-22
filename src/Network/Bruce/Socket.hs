@@ -127,7 +127,7 @@ listen (StreamSocket   _ s) n = N.listen s n
 
 -- | Accept a connection on a @Bruce@ 'Socket'.
 --
--- /Note: This is the identity function for datagram sockets./
+-- /Note: This is just @return@ for datagram sockets./
 accept :: Socket -> IO Socket
 accept s@DatagramSocket{} = return s
 accept (StreamSocket _ s) = do
