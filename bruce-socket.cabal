@@ -27,4 +27,5 @@ library
       , bytestring     >= 0.10.4
       , bruce-protocol >= 0.1
       , cereal         >= 0.4
+      , directory      >= 1.2
       , network        >= 2.6

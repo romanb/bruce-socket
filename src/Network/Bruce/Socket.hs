@@ -32,7 +32,10 @@ module Network.Bruce.Socket
     , listen
     , accept
     , recv
-    , ParseException (..)
+
+      -- * Exceptions
+    , ParseException   (..)
+    , ConnectionClosed (..)
 
       -- * Protocol Types
     , module P
@@ -40,13 +43,15 @@ module Network.Bruce.Socket
 
 import Control.Applicative
 import Control.Exception
-import Control.Monad (void)
+import Control.Monad (void, when, guard)
 import Data.ByteString.Builder
 import Data.Monoid
 import Data.Serialize
 import Data.Typeable
 import Network.Bruce.Protocol as P
 import Network.Bruce.Socket.Peek
+import System.Directory (removeFile)
+import System.IO.Error (isDoesNotExistError)
 
 import qualified Data.ByteString           as BS
 import qualified Network.Socket            as N
@@ -97,7 +102,12 @@ streamSocket host (N.PortNum port) = do
 
 -- | Close a @Bruce@ 'Socket'.
 close :: Socket -> IO ()
-close = N.close . _sock
+close (DatagramSocket (N.SockAddrUnix fp) s) = do
+    bound <- N.isBound s
+    N.close s
+    when bound . void $
+        tryJust (guard . isDoesNotExistError) (removeFile fp)
+close s = N.close $ _sock s
 
 -------------------------------------------------------------------------------
 -- Client
@@ -119,6 +129,8 @@ bind :: Socket -> IO ()
 bind s = N.bind (_sock s) (_addr s)
 
 -- | Listen for connections on a @Bruce@ 'Socket'.
+--
+-- The second argument specifies the maximum length of the backlog.
 --
 -- /Note: This is a no-op for datagram sockets./
 listen :: Socket -> Int -> IO ()
@@ -157,6 +169,10 @@ recv (StreamSocket addr sock) = do
 parse :: (a -> Either String b) -> a -> IO b
 parse f = either (throwIO . ParseException) return . f
 
+-------------------------------------------------------------------------------
+-- Exceptions
+
+-- | Thrown when parsing of a 'Message' in 'recv' fails.
 newtype ParseException = ParseException String
     deriving (Eq, Typeable)
 
@@ -165,6 +181,8 @@ instance Exception ParseException
 instance Show ParseException where
     show (ParseException e) = "bruce-socket: failed to parse: " ++ e
 
+-- | Thrown when 'recv' on a 'streamSocket' discovers that the peer
+-- has closed its half side of the connection.
 data ConnectionClosed = ConnectionClosed !N.SockAddr
     deriving (Eq, Typeable)
 
